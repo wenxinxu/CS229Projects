@@ -7,10 +7,10 @@ from torch.autograd import Variable
 import numpy as np
 from data_analysis import *
 
-train_data = pd.read_csv('data/Jan17Jul_split/train_data.csv', nrows=5000)
-dev_data = pd.read_csv('data/Jan17Jul_split/dev_data.csv', nrows=5000)
-train_labels = pd.read_csv('data/Jan17Jul_split/train_labels.csv', nrows=5000)
-dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv', nrows=5000)
+train_data = pd.read_csv('data/Jan17Jul_split/train_data.csv')
+dev_data = pd.read_csv('data/Jan17Jul_split/dev_data.csv')
+train_labels = pd.read_csv('data/Jan17Jul_split/train_labels.csv')
+dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv')
 
 
 train_data = train_data.drop('id', 1)
@@ -57,10 +57,10 @@ class simpleNN(nn.Module):
 
 def solicit_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--iterations', help='iterations', type=int, default=2000)
+    parser.add_argument('--iterations', help='iterations', type=int, default=80000)
     parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
     parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
-    parser.add_argument('--iter2report', help='iterations to report', type=int, default=500)
+    parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
     parser.add_argument('--version', help='version', type=str, default='test')
     return parser.parse_args()
 
