@@ -7,30 +7,40 @@ from torch.autograd import Variable
 import numpy as np
 from data_analysis import *
 
-train_data = pd.read_csv('data/Jan17Jul_split/train_data.csv')
-dev_data = pd.read_csv('data/Jan17Jul_split/dev_data.csv')
-train_labels = pd.read_csv('data/Jan17Jul_split/train_labels.csv')
-dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv')
-
-
-train_data = train_data.drop('id', 1)
-dev_data = dev_data.drop('id', 1)
-
-print 'Data readed in!'
-
-columns = list(train_data)
-
-train_data = train_data.as_matrix()
-dev_data = dev_data.as_matrix()
-train_labels = train_labels.as_matrix()
-dev_labels = dev_labels.as_matrix()
-
-
-num_examples = len(train_data)
-num_dev = len(dev_data)
+use_cuda = torch.cuda.is_available()
 
 NUM_STORES = 55
 NUM_ITEMS = 4100
+
+def solicit_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--iterations', help='iterations', type=int, default=80000)
+    parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
+    parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
+    parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
+    parser.add_argument('--version', help='version', type=str, default='test')
+    return parser.parse_args()
+
+args = solicit_args()
+
+
+def load_train_dev():
+    train_data = pd.read_csv('data/Jan17Jul_split/train_data.csv')
+    dev_data = pd.read_csv('data/Jan17Jul_split/dev_data.csv')
+    train_labels = pd.read_csv('data/Jan17Jul_split/train_labels.csv')
+    dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv')
+
+
+    train_data = train_data.drop('id', 1)
+    dev_data = dev_data.drop('id', 1)
+
+    print 'Data readed in!'
+
+    train_data = train_data.as_matrix()
+    dev_data = dev_data.as_matrix()
+    train_labels = train_labels.as_matrix()
+    dev_labels = dev_labels.as_matrix()
+    return train_data, dev_data, train_labels, dev_labels
 
 class simpleNN(nn.Module):
     def __init__(self, input_size, hidden_size=256, storeEmb_size=30, itemEmb_size=100):
@@ -42,7 +52,8 @@ class simpleNN(nn.Module):
         self.input_size = input_size - 2 + storeEmb_size + itemEmb_size
         self.fc1 = nn.Linear(self.input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, 1)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
+        self.fc4 = nn.Linear(hidden_size, 1)
 
     def forward(self, stores, items, input):
         storeEmbs = self.store_embeddings(stores)
@@ -51,32 +62,30 @@ class simpleNN(nn.Module):
 
         out = F.relu(self.fc1(inputs))
         out = F.relu(self.fc2(out))
-        out = self.fc3(out)
+        out = F.relu(self.fc3(out))
+        out = self.fc4(out)
         return out
 
 
-def solicit_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--iterations', help='iterations', type=int, default=80000)
-    parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
-    parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
-    parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
-    parser.add_argument('--version', help='version', type=str, default='test')
-    return parser.parse_args()
-
-
-def generate_dev_batch(dev_data, dev_labels):
+def generate_dev_batch(dev_data, dev_labels, num_dev):
     seq = np.random.choice(num_dev, args.dev_batch_size)
     batchD = dev_data[seq, :]
     batchStores = Variable(torch.LongTensor(batchD[:, 0].astype(np.int64)))
     batchItems = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
     batchD = Variable(torch.Tensor(batchD[:, 2:]))
     batchL = Variable(torch.Tensor(dev_labels[seq]))
+
+    batchD = batchD.cuda() if use_cuda else batchD
+    batchStores = batchStores.cuda() if use_cuda else batchStores
+    batchItems = batchItems.cuda() if use_cuda else batchItems
+    batchL = batchL.cuda() if use_cuda else batchL
+
+
     return batchStores, batchItems, batchD, batchL
 
-def validation(model, dev_data, dev_labels, loss_function):
+def validation(model, dev_data, dev_labels, loss_function, num_dev):
     model.eval()
-    batchStores, batchItems, batchD, batchL = generate_dev_batch(dev_data, dev_labels)
+    batchStores, batchItems, batchD, batchL = generate_dev_batch(dev_data, dev_labels, num_dev)
 
     predictions = model(batchStores, batchItems, batchD)
     loss = loss_function(predictions, batchL)
@@ -84,49 +93,61 @@ def validation(model, dev_data, dev_labels, loss_function):
     return loss
 
 
-args = solicit_args()
-
-losses = []
-steps = []
-dev_losses = []
-
-loss_function = nn.MSELoss()
-model = simpleNN(len(columns))
-optimizer = optim.SGD(model.parameters(), lr=0.01)
-
-for step in range(args.iterations):
-    seq = np.random.choice(num_examples, args.batch_size)
-    batchD = train_data[seq, :]
-    batchStores = Variable(torch.LongTensor(batchD[:, 0].astype(np.int64)))
-    batchItems = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
-    batchD = Variable(torch.Tensor(batchD[:, 2:]))
-    batchL = Variable(torch.Tensor(train_labels[seq]))
-
-    model.zero_grad()
-
-    predictions = model(batchStores, batchItems, batchD)
-    loss = loss_function(predictions, batchL)
-
-    if step % args.iter2report == 0:
-        print 'Current step = ', step
-        print 'Current loss = ', loss
-        losses.append(loss.data[0])
-        steps.append(step)
-
-        dev_loss = validation(model, dev_data, dev_labels, loss_function)
-
-        print 'Validation loss = ', dev_loss
-        dev_losses.append(dev_loss.data[0])
-
-    loss.backward()
-    optimizer.step()
+def train(train_data, dev_data, train_labels, dev_labels, model):
 
 
+    num_examples = len(train_data)
+    num_dev = len(dev_data)
 
-df = pd.DataFrame(data={'steps':steps, 'train_losses':losses, 'validation_losses':dev_losses})
-df.to_csv('records/' + args.version + '_error.csv', index=False)
+    losses = []
+    steps = []
+    dev_losses = []
+
+    loss_function = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+    for step in range(args.iterations):
+        seq = np.random.choice(num_examples, args.batch_size)
+        batchD = train_data[seq, :]
+        batchStores = Variable(torch.LongTensor(batchD[:, 0].astype(np.int64)))
+        batchItems = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
+        batchD = Variable(torch.Tensor(batchD[:, 2:]))
+        batchL = Variable(torch.Tensor(train_labels[seq]))
+
+        batchD = batchD.cuda() if use_cuda else batchD
+        batchStores = batchStores.cuda() if use_cuda else batchStores
+        batchItems = batchItems.cuda() if use_cuda else batchItems
+        batchL = batchL.cuda() if use_cuda else batchL
+
+        model.zero_grad()
+
+        predictions = model(batchStores, batchItems, batchD)
+        loss = loss_function(predictions, batchL)
+
+        if step % args.iter2report == 0:
+            print 'Current step = ', step
+            print 'Current loss = ', loss
+            losses.append(loss.data[0])
+            steps.append(step)
+
+            dev_loss = validation(model, dev_data, dev_labels, loss_function, num_dev)
+
+            print 'Validation loss = ', dev_loss
+            dev_losses.append(dev_loss.data[0])
+
+        loss.backward()
+        optimizer.step()
+
+    df = pd.DataFrame(data={'steps':steps, 'train_losses':losses, 'validation_losses':dev_losses})
+    df.to_csv('records/' + args.version + '_error.csv', index=False)
 
 
-
+if __name__ == "__main__":
+    train_data, dev_data, train_labels, dev_labels = load_train_dev()
+    model = simpleNN(train_data.shape[1])
+    model = model.cuda() if use_cuda else model
+    train(train_data, dev_data, train_labels, dev_labels, model)
+    torch.save(model, 'records/' + args.version + '.pt')
+    print 'Model saved to ' + 'records/' + args.version + '.pt'
 
 
