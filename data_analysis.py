@@ -1,5 +1,6 @@
 import pandas as pd
 import gc
+import collections
 
 def readin_data(path='data/train.csv', skiprows=range(1, 101688780)):
     dtypes = {'id':'int64', 'item_nbr':'int32', 'store_nbr':'int8', 'onpromotion':'int8', 'unit_sales':'float32'}
@@ -24,6 +25,16 @@ def item2idx(df):
     return df
 
 
+def perishable_dict(path='data/items.csv'):
+    df = pd.read_csv(path, usecols=['item_nbr', 'perishable']).as_matrix()
+    peri = collections.defaultdict(int)
+    for i in range(len(df)):
+        if df[i][1] == 1:
+            peri[df[i][0]] = 1.25
+        else:
+            peri[df[i][0]] = 1
+    return peri
+
 def pre_processing(train):
     train.loc[(train.unit_sales<0),'unit_sales'] = 0 # eliminate negatives
     train['unit_sales'] =  train['unit_sales'].apply(pd.np.log1p) #logarithm conversion
@@ -33,8 +44,16 @@ def pre_processing(train):
     train.loc[:, 'onpromotion'].fillna(0, inplace=True)
     del train['date']
 
+    print 'Adding perishable...'
+    peri_dict = perishable_dict()
+    train['perishable'] = train['item_nbr'].apply(lambda x:peri_dict[x])
+
     train = item2idx(train)
     train = pd.get_dummies(train, columns=['month', 'dow'])
+
+    train= train[['unit_sales', 'perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month_1', 'month_2', 'month_3',
+                          'month_4', 'month_5', 'month_6', 'month_7', 'month_8', 'dow_0', 'dow_1', 'dow_2',
+                  'dow_3', 'dow_4', 'dow_5', 'dow_6']]
 
     # print train.store_nbr.unique().shape # 54
     # print train.item_nbr.unique().shape # 4018
@@ -45,8 +64,8 @@ def pre_processing(train):
 
 def split(df):
     # Need to change when including more training data
-    dev = df.iloc[0:22237293, :] # Aug
-    train = df.iloc[22237293:, :] # July
+    train = df.iloc[0:22237293, :] # Aug
+    dev = df.iloc[22237293:, :] # July
     dev_label = dev['unit_sales']
     dev_data = dev.drop('unit_sales', 1)
     del dev
@@ -63,10 +82,7 @@ def split(df):
 
 if __name__ == "__main__":
     data = readin_data()
-    print data.iloc[0:5, :]
     data = pre_processing(data)
-
-    print data.iloc[0:5, :]
     train_data, train_label, dev_data, dev_label = split(data)
 
     train_data.to_csv('data/Jan17Jul_split/train_data.csv', index=False)

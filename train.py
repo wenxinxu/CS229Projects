@@ -18,7 +18,7 @@ def solicit_args():
     parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
     parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
     parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
-    parser.add_argument('--version', help='version', type=str, default='test')
+    parser.add_argument('--version', help='version', type=str, default='v0')
     return parser.parse_args()
 
 args = solicit_args()
@@ -31,8 +31,8 @@ def load_train_dev():
     dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv')
 
 
-    train_data = train_data.drop('id', 1)
-    dev_data = dev_data.drop('id', 1)
+    # train_data = train_data.drop('id', 1)
+    # dev_data = dev_data.drop('id', 1)
 
     print 'Data readed in!'
 
@@ -43,7 +43,7 @@ def load_train_dev():
     return train_data, dev_data, train_labels, dev_labels
 
 class simpleNN(nn.Module):
-    def __init__(self, input_size, hidden_size=256, storeEmb_size=30, itemEmb_size=100):
+    def __init__(self, input_size, hidden_size=256, storeEmb_size=100, itemEmb_size=200):
         super(simpleNN, self).__init__()
 
         self.store_embeddings = nn.Embedding(NUM_STORES, storeEmb_size)
@@ -67,12 +67,17 @@ class simpleNN(nn.Module):
         return out
 
 
+def weighted_MSE(predictions, targets, weights):
+    return torch.sum(torch.mul(weights, ((predictions - targets) ** 2))) / torch.sum(weights)
+
+
 def generate_dev_batch(dev_data, dev_labels, num_dev):
     seq = np.random.choice(num_dev, args.dev_batch_size)
     batchD = dev_data[seq, :]
-    batchStores = Variable(torch.LongTensor(batchD[:, 0].astype(np.int64)))
-    batchItems = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
-    batchD = Variable(torch.Tensor(batchD[:, 2:]))
+    batchPerishable = Variable(torch.FloatTensor(batchD[:, 0].astype(np.int64))).view((args.dev_batch_size, 1))
+    batchStores = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
+    batchItems = Variable(torch.LongTensor(batchD[:, 2].astype(np.int64)))
+    batchD = Variable(torch.Tensor(batchD[:, 3:]))
     batchL = Variable(torch.Tensor(dev_labels[seq]))
 
     batchD = batchD.cuda() if use_cuda else batchD
@@ -81,14 +86,15 @@ def generate_dev_batch(dev_data, dev_labels, num_dev):
     batchL = batchL.cuda() if use_cuda else batchL
 
 
-    return batchStores, batchItems, batchD, batchL
+    return batchPerishable, batchStores, batchItems, batchD, batchL
 
 def validation(model, dev_data, dev_labels, loss_function, num_dev):
     model.eval()
-    batchStores, batchItems, batchD, batchL = generate_dev_batch(dev_data, dev_labels, num_dev)
+    batchPerishable, batchStores, batchItems, batchD, batchL = generate_dev_batch(dev_data, dev_labels, num_dev)
 
     predictions = model(batchStores, batchItems, batchD)
-    loss = loss_function(predictions, batchL)
+    loss = loss_function(predictions, batchL, batchPerishable)
+    # loss = loss_function(predictions, batchL)
 
     return loss
 
@@ -103,15 +109,17 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     steps = []
     dev_losses = []
 
-    loss_function = nn.MSELoss()
+    loss_function = weighted_MSE
+    # loss_function = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01)
 
     for step in range(args.iterations):
         seq = np.random.choice(num_examples, args.batch_size)
         batchD = train_data[seq, :]
-        batchStores = Variable(torch.LongTensor(batchD[:, 0].astype(np.int64)))
-        batchItems = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
-        batchD = Variable(torch.Tensor(batchD[:, 2:]))
+        batchPerishable = Variable(torch.FloatTensor(batchD[:, 0].astype(np.int64))).view((args.batch_size, 1))
+        batchStores = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
+        batchItems = Variable(torch.LongTensor(batchD[:, 2].astype(np.int64)))
+        batchD = Variable(torch.Tensor(batchD[:, 3:]))
         batchL = Variable(torch.Tensor(train_labels[seq]))
 
         batchD = batchD.cuda() if use_cuda else batchD
@@ -122,7 +130,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         model.zero_grad()
 
         predictions = model(batchStores, batchItems, batchD)
-        loss = loss_function(predictions, batchL)
+        loss = loss_function(predictions, batchL, batchPerishable)
+        # loss = loss_function(predictions, batchL)
 
         if step % args.iter2report == 0:
             print 'Current step = ', step
@@ -144,7 +153,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
 if __name__ == "__main__":
     train_data, dev_data, train_labels, dev_labels = load_train_dev()
-    model = simpleNN(train_data.shape[1])
+    model = simpleNN(train_data.shape[1] - 1)
     model = model.cuda() if use_cuda else model
     train(train_data, dev_data, train_labels, dev_labels, model)
     torch.save(model, 'records/' + args.version + '.pt')
