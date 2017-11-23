@@ -89,7 +89,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
     loss_function = weighted_MSE
     # loss_function = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.init_lr)
+    optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=0.9)
     start = time.time()
 
     for step in range(args.iterations):

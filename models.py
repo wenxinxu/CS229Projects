@@ -14,10 +14,10 @@ class simpleNN(nn.Module):
         self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
 
         self.input_size = input_size - 2 + storeEmb_size + itemEmb_size
-        self.fc1 = nn.Linear(self.input_size, 2 * hidden_size)
-        self.fc2 = nn.Linear(2 * hidden_size, 2 * hidden_size)
-        self.fc3 = nn.Linear(2 * hidden_size, 2 * hidden_size)
-        self.fc4 = nn.Linear(2 * hidden_size, hidden_size)
+        self.fc1 = nn.Linear(self.input_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, hidden_size)
+        self.fc4 = nn.Linear(hidden_size, hidden_size)
         self.fc5 = nn.Linear(hidden_size, hidden_size)
         self.fc6 = nn.Linear(hidden_size, hidden_size)
         self.fc7 = nn.Linear(hidden_size, 1)
@@ -29,9 +29,16 @@ class simpleNN(nn.Module):
         itemEmbs = self.item_embeddings(items)
         inputs = torch.cat((storeEmbs, itemEmbs, input), dim=1)
 
+        outs = []
+
         out = F.relu(self.fc1(inputs))
+        outs.append(out)
+        
         for layer in self.layers:
             out = F.relu(layer(out))
+            outs.append(out)
+            if layer == self.fc6:
+                out += outs[1]
         out = self.fc7(out)
         return out
 
