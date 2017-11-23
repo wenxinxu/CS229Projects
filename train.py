@@ -89,7 +89,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
     loss_function = weighted_MSE
     # loss_function = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=0.9)
+    optimizer = optim.Adam(model.parameters(), lr=args.init_lr * 0.01)
     start = time.time()
 
     for step in range(args.iterations):
@@ -115,7 +115,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         if step % args.iter2report == 0:
             print 'Current step = ', step
             print 'Current loss = ', loss
-            print '%d%% complete %s' % ((step/args.iterations * 100) , (timeSince(start, step * 1.0/args.iterations)))
+            print '%d%% complete %s' % ((step * 1.0/args.iterations * 100) , (timeSince(start,
+                                                                                     step * 1.0/args.iterations)))
             losses.append(loss.data[0])
             steps.append(step)
 

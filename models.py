@@ -33,12 +33,12 @@ class simpleNN(nn.Module):
 
         out = F.relu(self.fc1(inputs))
         outs.append(out)
-        
+
         for layer in self.layers:
             out = F.relu(layer(out))
-            outs.append(out)
-            if layer == self.fc6:
+            if layer == self.fc4:
                 out += outs[1]
+            outs.append(out)
         out = self.fc7(out)
         return out
 
