@@ -6,7 +6,7 @@ NUM_STORES = 55
 NUM_ITEMS = 4100
 
 class NN1(nn.Module):
-    def __init__(self, input_size, hidden_size=256, storeEmb_size=100, itemEmb_size=200):
+    def __init__(self, input_size, hidden_size=512, storeEmb_size=200, itemEmb_size=300):
         super(NN1, self).__init__()
 
         self.store_embeddings = nn.Embedding(NUM_STORES, storeEmb_size)

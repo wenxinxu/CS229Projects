@@ -13,11 +13,11 @@ DECAY = [0.5, 0.75]
 
 def solicit_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--iterations', help='iterations', type=int, default=80000)
+    parser.add_argument('--iterations', help='iterations', type=int, default=100000)
     parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
     parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
     parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
-    parser.add_argument('--version', help='version', type=str, default='v1')
+    parser.add_argument('--version', help='version', type=str, default='v2_momentum')
     parser.add_argument('--init_lr', help='initialized learning rate', type=float, default=0.01)
     return parser.parse_args()
 
@@ -89,7 +89,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
     loss_function = weighted_MSE
     # loss_function = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.init_lr * 0.01)
+    # optimizer = optim.Adam(model.parameters(), lr=args.init_lr * 0.01)
+    optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=0.9)
     start = time.time()
 
     for step in range(args.iterations):
