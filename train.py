@@ -18,7 +18,7 @@ def solicit_args():
     parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
     parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
     parser.add_argument('--version', help='version', type=str, default='v1')
-    parser.add_argument('--init_lr', help='initialized learning rate', type=float, default=0.001)
+    parser.add_argument('--init_lr', help='initialized learning rate', type=float, default=0.01)
     return parser.parse_args()
 
 args = solicit_args()
@@ -125,7 +125,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
             print 'Validation loss = ', dev_loss
             dev_losses.append(dev_loss.data[0])
 
-        if step == args.iterations * DECAY[0] or args.iterations * DECAY[1]:
+        if step == args.iterations * DECAY[0] or step == args.iterations * DECAY[1]:
             print 'Decay learning rate to ' + str(args.init_lr * 0.1 ** (1 + step / DECAY[1]))
             lr = args.init_lr * 0.1 ** (1 + step / DECAY[1])
             for param_group in optimizer.param_groups:
