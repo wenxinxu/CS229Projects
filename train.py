@@ -1,16 +1,15 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from models import *
 import torch.optim as optim
 import argparse
 from torch.autograd import Variable
 import numpy as np
 from data_analysis import *
+import time
+from utils import *
 
 use_cuda = torch.cuda.is_available()
+DECAY = [0.5, 0.75]
 
-NUM_STORES = 55
-NUM_ITEMS = 4100
 
 def solicit_args():
     parser = argparse.ArgumentParser()
@@ -18,7 +17,8 @@ def solicit_args():
     parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
     parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
     parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
-    parser.add_argument('--version', help='version', type=str, default='v0')
+    parser.add_argument('--version', help='version', type=str, default='v1')
+    parser.add_argument('--init_lr', help='initialized learning rate', type=float, default=0.01)
     return parser.parse_args()
 
 args = solicit_args()
@@ -42,29 +42,7 @@ def load_train_dev():
     dev_labels = dev_labels.as_matrix()
     return train_data, dev_data, train_labels, dev_labels
 
-class simpleNN(nn.Module):
-    def __init__(self, input_size, hidden_size=256, storeEmb_size=100, itemEmb_size=200):
-        super(simpleNN, self).__init__()
 
-        self.store_embeddings = nn.Embedding(NUM_STORES, storeEmb_size)
-        self.item_embeddings = nn.Embedding(NUM_ITEMS, itemEmb_size)
-
-        self.input_size = input_size - 2 + storeEmb_size + itemEmb_size
-        self.fc1 = nn.Linear(self.input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, hidden_size)
-        self.fc4 = nn.Linear(hidden_size, 1)
-
-    def forward(self, stores, items, input):
-        storeEmbs = self.store_embeddings(stores)
-        itemEmbs = self.item_embeddings(items)
-        inputs = torch.cat((storeEmbs, itemEmbs, input), dim=1)
-
-        out = F.relu(self.fc1(inputs))
-        out = F.relu(self.fc2(out))
-        out = F.relu(self.fc3(out))
-        out = self.fc4(out)
-        return out
 
 
 def weighted_MSE(predictions, targets, weights):
@@ -111,7 +89,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
     loss_function = weighted_MSE
     # loss_function = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.SGD(model.parameters(), lr=args.init_lr)
+    start = time.time()
 
     for step in range(args.iterations):
         seq = np.random.choice(num_examples, args.batch_size)
@@ -136,6 +115,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         if step % args.iter2report == 0:
             print 'Current step = ', step
             print 'Current loss = ', loss
+            print '%d%% complete %s' % ((step/args.iterations * 100) , (timeSince(start, step/args.iterations)))
             losses.append(loss.data[0])
             steps.append(step)
 
@@ -143,6 +123,11 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
             print 'Validation loss = ', dev_loss
             dev_losses.append(dev_loss.data[0])
+
+        if step == args.iterations * DECAY[0] or args.iterations * DECAY[1]:
+            lr = args.init_lr * 0.1 ** (1 + step / DECAY[1])
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
 
         loss.backward()
         optimizer.step()
