@@ -115,7 +115,7 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         if step % args.iter2report == 0:
             print 'Current step = ', step
             print 'Current loss = ', loss
-            print '%d%% complete %s' % ((step/args.iterations * 100) , (timeSince(start, step/args.iterations)))
+            print '%d%% complete %s' % ((step/args.iterations * 100) , (timeSince(start, step * 1.0/args.iterations)))
             losses.append(loss.data[0])
             steps.append(step)
 
