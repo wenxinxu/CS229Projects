@@ -45,22 +45,26 @@ class NN1(nn.Module):
 
 
 class simpleNN(nn.Module):
-    def __init__(self, input_size, hidden_size=256, storeEmb_size=100, itemEmb_size=200):
+    def __init__(self, input_size, hidden_size=256, storeEmb_size=100, itemEmb_size=200, monthEmb_size=10, dowEmb_size=5):
         super(simpleNN, self).__init__()
 
         self.store_embeddings = nn.Embedding(NUM_STORES, storeEmb_size)
         self.item_embeddings = nn.Embedding(NUM_ITEMS, itemEmb_size)
+        self.month_embeddings = nn.Embedding(13, monthEmb_size)
+        self.dow_embeddings = nn.Embedding(8, dowEmb_size)
 
-        self.input_size = input_size - 2 + storeEmb_size + itemEmb_size
+        self.input_size = input_size - 4 + storeEmb_size + itemEmb_size + monthEmb_size + dowEmb_size
         self.fc1 = nn.Linear(self.input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, hidden_size)
         self.fc4 = nn.Linear(hidden_size, 1)
 
-    def forward(self, stores, items, input):
+    def forward(self, stores, items, month, dow, input):
         storeEmbs = self.store_embeddings(stores)
         itemEmbs = self.item_embeddings(items)
-        inputs = torch.cat((storeEmbs, itemEmbs, input), dim=1)
+        monthEmbs = self.month_embeddings(month)
+        dowEmbs = self.dow_embeddings(dow)
+        inputs = torch.cat((storeEmbs, itemEmbs, monthEmbs, dowEmbs, input), dim=1)
 
         out = F.relu(self.fc1(inputs))
         out = F.relu(self.fc2(out))
