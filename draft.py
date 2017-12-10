@@ -38,7 +38,7 @@ def find_unit_sales(store, item, month, day):
         return 0
 
 
-for i in range(1, 31):
+for i in range(1, 16):
     print 'Adding %i th days ago...' % i
     df['new_date'] = df['date'] - pd.to_timedelta(i, unit='d')
     df['new_day'] = df['new_date'].dt.day
