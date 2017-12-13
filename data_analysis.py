@@ -117,7 +117,7 @@ def fill30days(df, save_path):
 
     dfs = {4:df4, 5:df5, 6:df6, 7:df7, 8:df8}
 
-    for i in range(1, 31):
+    for i in range(1, 10):
         print 'Adding %i th days ago...' %i
         df['new_date'] = df['date'] - pd.to_timedelta(i, unit='d')
         print 'Start applying...'
