@@ -81,7 +81,7 @@ def fillDays(df):
         sales = []
         start = time.time()
         for j in range(len(df)):
-            if df.loc[df.index[j], 'date'].dt.month < 5:
+            if df.loc[df.index[j], 'date'].month < 5:
                 sales.append(0)
                 continue
             if j % 100000 == 0:
