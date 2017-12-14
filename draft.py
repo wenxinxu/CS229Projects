@@ -62,35 +62,106 @@ import numpy as np
 #
 # print df.iloc[0:5, :]
 # df.to_csv('data/april/may_teacher_forcing.csv', index=False)
+#
+# def find_unit_sales(store, item, date, grouped):
+#     if (store, item, date) in grouped.groups:
+#         return grouped.get_group((store, item, date))['unit_sales']
+#     else:
+#         return 0
+#
+# def fillDays(df):
+#     df['date'] = pd.to_datetime(df['date'])
+#     grouped = df.groupby(['store_nbr', 'item_nbr', 'date'])
+#
+#     for i in range(2, 16):
+#         print 'Adding %i th days ago...' % i
+#         sales = []
+#         start = time.time()
+#         for j in range(3100000, len(df)):
+#             if df.loc[df.index[j], 'date'].month < 5:
+#                 sales.append(0)
+#                 continue
+#             if j % 100000 == 0:
+#                 print 'Processing the %i th row..' % j
+#                 print 'Time cost = ', time.time() - start
+#                 start = time.time()
+#
+#             new_date = df.loc[df.index[j], 'date'] - pd.to_timedelta(i, unit='d')
+#             sale = find_unit_sales(df.loc[df.index[j], 'store_nbr'], df.loc[df.index[j], 'item_nbr'], new_date, grouped)
+#             sales.append(sale)
+#         np.save('data/april/f' + str(i) + '.npy', arr=sales)
+#         print 'Saved the %i th feature...' %i
+#
 
-def find_unit_sales(store, item, date, grouped):
-    if (store, item, date) in grouped.groups:
-        return grouped.get_group((store, item, date))['unit_sales']
-    else:
-        return 0
 
-def fillDays(df):
-    df['date'] = pd.to_datetime(df['date'])
-    grouped = df.groupby(['store_nbr', 'item_nbr', 'date'])
+# fillDays(df)
 
-    for i in range(2, 16):
-        print 'Adding %i th days ago...' % i
-        sales = []
-        start = time.time()
-        for j in range(3100000, len(df)):
-            if df.loc[df.index[j], 'date'].month < 5:
-                sales.append(0)
-                continue
-            if j % 100000 == 0:
-                print 'Processing the %i th row..' % j
-                print 'Time cost = ', time.time() - start
-                start = time.time()
+# df = pd.read_csv('data/april/may.csv')
+# b = pd.read_csv('data/april/april.csv')
+#
+# df['year'] = 1
+# a = pd.merge(b, df, how='outer')
+# print a.tail()
+# print a.head()
+# print len(a)
+# a.to_csv('data/april/aa.csv')
+# print grouped.get_group((15, 17)).head(50)
 
-            new_date = df.loc[df.index[j], 'date'] - pd.to_timedelta(i, unit='d')
-            sale = find_unit_sales(df.loc[df.index[j], 'store_nbr'], df.loc[df.index[j], 'item_nbr'], new_date, grouped)
-            sales.append(sale)
-        np.save('data/april/f' + str(i) + '.npy', arr=sales)
-        print 'Saved the %i th feature...' %i
+# df = pd.read_csv('data/april/julaug16.csv')
+# print df.head()
+# print df.tail()
+# print(len(df))
+# generate_features(path='data/april/julaug16.csv', save_path='data/april/julaug16_feature.npy')
 
-df = pd.read_csv('data/april/april.csv', usecols=['unit_sales', 'date', 'store_nbr', 'item_nbr'])
-fillDays(df)
+
+
+
+
+# df = pd.read_csv('data/april/april.csv')
+# # print(len(df))
+# df = df.query('(month > 4) | (day > 15)')
+# train_data, train_labels, dev_data, dev_labels = split(df)
+# #
+# #
+# #
+# #
+# train2 = pd.read_csv('data/april/julaug16.csv')
+# print train2.head()
+# print train2.tail()
+# train2 = train2.query('(month > 7) | (day > 15)')
+#
+# train_l2 = train2['unit_sales'].as_matrix()
+# train_d2 = train2.drop('unit_sales', 1)
+#
+# train_data = pd.concat((train_d2, train_data), axis=0)
+# train_labels = np.concatenate((train_l2, train_labels), axis=0)
+#
+# train_data.to_csv('data/april/train.csv', index=False)
+# dev_data.to_csv('data/april/dev.csv', index=False)
+# np.save('data/april/train_labels.npy', train_labels)
+# np.save('data/april/dev_labels.npy', dev_labels)
+#
+# print train_data.head()
+# print train_data.tail()
+#
+# print dev_data.head()
+# print dev_data.tail()
+
+# df = pd.read_csv('data/april/julaug16.csv')
+# print df.head()
+# print df.tail()
+# df['date'] = pd.to_datetime(df['date'])
+# year = df['date'].dt.year
+# df = df.loc[year == 2016]
+# df.to_csv('data/april/julaug16.csv', index=False)
+# generate_features('data/april/julaug16.csv', 'data/april/julaug16_features.npy')
+
+# train_data = pd.read_csv('data/april/train.csv')
+# dev_data = pd.read_csv('data/april/dev.csv')
+# feature2 = np.load('data/april/april_sales.npy')
+# feature1 = np.load('data/april/julaug16_features.npy')
+#
+# df_train = add_historical_features(dev_data, feature1, feature2=feature2)
+# df_train.to_csv('data/april/df_dev.csv', index=False)
+a = pd.read_csv('data/april/df_dev.csv')
+print a.columns.tolist()
