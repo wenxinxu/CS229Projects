@@ -50,15 +50,13 @@ class simpleNN(nn.Module):
     def __init__(self, input_size, hidden_size=256, storeEmb_size=60, itemEmb_size=300, monthEmb_size=10, dowEmb_size=10):
         super(simpleNN, self).__init__()
 
-
-
         self.store_embeddings = nn.Embedding(NUM_STORES, storeEmb_size)
         self.item_embeddings = nn.Embedding(NUM_ITEMS, itemEmb_size)
         self.month_embeddings = nn.Embedding(13, monthEmb_size)
         self.dow_embeddings = nn.Embedding(8, dowEmb_size)
-        self.day_embeddings = nn.Embedding(32, 100)
+        self.day_embeddings = nn.Embedding(32, 10)
 
-        self.input_size = input_size - 5 + storeEmb_size + itemEmb_size + monthEmb_size + dowEmb_size + 100
+        self.input_size = input_size - 5 + storeEmb_size + itemEmb_size + monthEmb_size + dowEmb_size + 10
         self.fc1 = nn.Linear(self.input_size, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, hidden_size)
