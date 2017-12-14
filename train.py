@@ -89,8 +89,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
 
 
-        batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.batch_size, 1)).contiguous()
-        batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.batch_size, 1)).contiguous()
+        batchPro = Variable(torch.Tensor(batchD[:, 3])).contiguous().view((args.batch_size, 1))
+        batchYear = Variable(torch.Tensor(batchD[:, 7])).contiguous().view((args.batch_size, 1))
         batchHis = Variable(torch.Tensor(batchD[:, 8:]))
         batchL = Variable(torch.Tensor(train_labels[seq]))
 
