@@ -4,10 +4,11 @@ from torch.autograd import Variable
 from data_analysis import *
 import time
 from utils import *
+import torch.nn.init as init
 
 use_cuda = torch.cuda.is_available()
 HISTORY = 15 # How many days to look back
-DECAY = [0.5, 0.75]
+DECAY = [0.75, 0.95]
 cols = []
 columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow', 'day', 'year',
            'us0', 'us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'us9', 'us10', 'us11', 'us12',
@@ -41,8 +42,8 @@ def generate_dev_batch(dev_data, dev_labels, num_dev):
     batchDay = Variable(torch.LongTensor(batchD[:, 6].astype(np.int64)))
     batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
 
-    batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.dev_batch_size, 1))
-    batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.dev_batch_size, 1))
+    batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.dev_batch_size, 1)).contiguous()
+    batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.dev_batch_size, 1)).contiguous()
     batchHis = Variable(torch.Tensor(batchD[:, 8:]))
     batchL = Variable(torch.Tensor(dev_labels[seq]))
 
@@ -88,8 +89,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
 
 
-        batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.batch_size, 1))
-        batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.batch_size, 1))
+        batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.batch_size, 1)).contiguous()
+        batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.batch_size, 1)).contiguous()
         batchHis = Variable(torch.Tensor(batchD[:, 8:]))
         batchL = Variable(torch.Tensor(train_labels[seq]))
 
@@ -101,6 +102,9 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         model.zero_grad()
 
         predictions = model(varList)
+        # print 'Predcition = ', predictions
+
+
         loss = loss_function(predictions, batchL, batchPerishable)
 
         if step % args.iter2report == 0:
@@ -116,6 +120,12 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
             print 'Validation loss = ', dev_loss
             dev_losses.append(dev_loss.data[0])
 
+        # if step == args.iter2report * 3:
+        #     lr = 0.01
+        #     for param_group in optimizer.param_groups:
+        #         param_group['lr'] = lr
+        #     print 'Learning rate increased ... '
+
         if step == args.iterations * DECAY[0] or step == args.iterations * DECAY[1]:
             print 'Decay learning rate to ' + str(args.init_lr * 0.1 ** (1 + step / DECAY[1]))
             lr = args.init_lr * 0.1 ** (1 + step / DECAY[1])
@@ -129,10 +139,16 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     df.to_csv('records/' + args.version + '_error.csv', index=False)
 
 
+def init_weights(m):
+    if type(m) == nn.Embedding:
+        init.normal(m.weight, mean=0, std=0.001)
+
+
 if __name__ == "__main__":
     train_data, dev_data, train_labels, dev_labels = load_train_dev()
     model = simpleNN(train_data.shape[1])
     model = model.cuda() if use_cuda else model
+    model.apply(init_weights)
     train(train_data, dev_data, train_labels, dev_labels, model)
     torch.save(model, 'records/' + args.version + '.pt')
     print 'Model saved to ' + 'records/' + args.version + '.pt'
