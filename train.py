@@ -7,7 +7,7 @@ from utils import *
 
 use_cuda = torch.cuda.is_available()
 HISTORY = 15 # How many days to look back
-DECAY = [0.5, 0.75]
+DECAY = [0.2, 0.4, 0.6, 0.8]
 cols = []
 columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow', 'day', 'year',
            'us0', 'us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'us9', 'us10', 'us11', 'us12',
@@ -41,7 +41,7 @@ def weighted_MSE(predictions, targets, weights):
     # print ((predictions - targets) ** 2)[0:5]
     targets = targets.view((-1, 1))
     diff = predictions - targets
-    return torch.sum(torch.mul(weights, (torch.mul(diff, diff)))) / torch.sum(weights)
+    return torch.sqrt(torch.sum(torch.mul(weights, (torch.mul(diff, diff)))) / torch.sum(weights))
 
 
     # loss_function = nn.MSELoss()

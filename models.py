@@ -56,7 +56,7 @@ class simpleNN(nn.Module):
         self.dow_embeddings = nn.Embedding(8, dowEmb_size)
         self.day_embeddings = nn.Embedding(32, 2)
         self.input_embeddings = nn.Linear(input_size - 5, storeEmb_size + itemEmb_size + monthEmb_size + dowEmb_size + 2)
-        init.normal(self.input_embeddings.weight, mean=0, std=0.00001)
+        init.normal(self.input_embeddings.weight, mean=0, std=0.001)
 
 
 
