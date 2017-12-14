@@ -4,11 +4,10 @@ from torch.autograd import Variable
 from data_analysis import *
 import time
 from utils import *
-import torch.nn.init as init
 
 use_cuda = torch.cuda.is_available()
 HISTORY = 15 # How many days to look back
-DECAY = [0.75, 0.95]
+DECAY = [0.5, 0.75]
 cols = []
 columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow', 'day', 'year',
            'us0', 'us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'us9', 'us10', 'us11', 'us12',
@@ -16,8 +15,12 @@ columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow',
 
 
 def load_train_dev():
-    train_data = pd.read_csv('data/april/df_train.csv', usecols=columns)
-    dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns)
+    if args.debug:
+        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns, nrows=2000)
+        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns, nrows=2000)
+    else:
+        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns)
+        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns)
     train_labels = np.load('data/april/train_labels.npy')
     dev_labels = np.load('data/april/dev_labels.npy')
 
@@ -29,8 +32,20 @@ def load_train_dev():
 
 
 def weighted_MSE(predictions, targets, weights):
-    return torch.sum(torch.mul(weights, ((predictions - targets) ** 2))) / torch.sum(weights)
+    # print torch.mul(weights, ((predictions - targets) ** 2))
+    #
+    # print predictions[0:5]
+    # print 'predictions - targets = '
+    # print targets[0:5]
+    # print '------------'
+    # print ((predictions - targets) ** 2)[0:5]
+    targets = targets.view((-1, 1))
+    diff = predictions - targets
+    return torch.sum(torch.mul(weights, (torch.mul(diff, diff)))) / torch.sum(weights)
 
+
+    # loss_function = nn.MSELoss()
+    # return loss_function(predictions, targets)
 
 def generate_dev_batch(dev_data, dev_labels, num_dev):
     seq = np.random.choice(num_dev, args.dev_batch_size)
@@ -73,7 +88,6 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     dev_losses = []
 
     loss_function = weighted_MSE
-    # loss_function = nn.MSELoss()
     # optimizer = optim.Adam(model.parameters(), lr=args.init_lr * 0.01)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=0.9)
     start = time.time()
@@ -106,7 +120,6 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
 
         loss = loss_function(predictions, batchL, batchPerishable)
-
         if step % args.iter2report == 0:
             print 'Current step = ', step
             print 'Current loss = ', loss
@@ -139,16 +152,12 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     df.to_csv('records/' + args.version + '_error.csv', index=False)
 
 
-def init_weights(m):
-    if type(m) == nn.Embedding:
-        init.normal(m.weight, mean=0, std=0.001)
-
 
 if __name__ == "__main__":
     train_data, dev_data, train_labels, dev_labels = load_train_dev()
     model = simpleNN(train_data.shape[1])
+    # model = resNext(train_data.shape[1])
     model = model.cuda() if use_cuda else model
-    model.apply(init_weights)
     train(train_data, dev_data, train_labels, dev_labels, model)
     torch.save(model, 'records/' + args.version + '.pt')
     print 'Model saved to ' + 'records/' + args.version + '.pt'
