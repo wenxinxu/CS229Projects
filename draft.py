@@ -1,7 +1,6 @@
 import pandas as pd
 from data_analysis import *
 import numpy as np
-import numba
 
 # data = pd.read_csv('data/april/april.csv') #14489514
 # print len(data)
@@ -64,14 +63,12 @@ import numba
 # print df.iloc[0:5, :]
 # df.to_csv('data/april/may_teacher_forcing.csv', index=False)
 
-@numba.jit
 def find_unit_sales(store, item, date, grouped):
     if (store, item, date) in grouped.groups:
         return grouped.get_group((store, item, date))['unit_sales']
     else:
         return 0
 
-@numba.jit
 def fillDays(df):
     df['date'] = pd.to_datetime(df['date'])
     grouped = df.groupby(['store_nbr', 'item_nbr', 'date'])
@@ -80,7 +77,7 @@ def fillDays(df):
         print 'Adding %i th days ago...' % i
         sales = []
         start = time.time()
-        for j in range(len(df)):
+        for j in range(3100000, len(df)):
             if df.loc[df.index[j], 'date'].month < 5:
                 sales.append(0)
                 continue
