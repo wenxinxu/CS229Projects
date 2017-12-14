@@ -42,8 +42,8 @@ def generate_dev_batch(dev_data, dev_labels, num_dev):
     batchDay = Variable(torch.LongTensor(batchD[:, 6].astype(np.int64)))
     batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
 
-    batchPro = Variable(torch.Tensor(batchD[:, 3])).view((args.dev_batch_size, 1)).contiguous()
-    batchYear = Variable(torch.Tensor(batchD[:, 7])).view((args.dev_batch_size, 1)).contiguous()
+    batchPro = Variable(torch.Tensor(batchD[:, 3])).contiguous().view((args.dev_batch_size, 1))
+    batchYear = Variable(torch.Tensor(batchD[:, 7])).contiguous().view((args.dev_batch_size, 1))
     batchHis = Variable(torch.Tensor(batchD[:, 8:]))
     batchL = Variable(torch.Tensor(dev_labels[seq]))
 
