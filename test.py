@@ -95,6 +95,8 @@ def test(df, model):
 
 
         prediction = model(varList)
+
+        print prediction
         predictions[offset:offset+args.dev_batch_size] = prediction.data.numpy()[:, 0]
         offset += args.dev_batch_size
 
@@ -121,9 +123,18 @@ for i, group in grouped:
 
 np.save('data/april/model3_features.npy', features)
 print features.shape
-test_df.to_csv('data/april/model3_predictions', index=False)
+test_df.to_csv('data/april/model3_predictions.csv', index=False)
 print test_df.head()
 print test_df.tail()
 
 
+def merge_test():
+    test_df = pd.read_csv('data/test.csv', usecols=['id'], dtype=int)
+    prediction = pd.read_csv('data/april/model3_predictions.csv', usecols=['unit_sales'])
+
+    merged = pd.concat([test_df, prediction], axis=1)
+    merged['unit_sales'] = merged['unit_sales'].apply(pd.np.expm1)
+
+    merged.to_csv('test_results/3.csv', index=False)
+    print merged.head()
 
