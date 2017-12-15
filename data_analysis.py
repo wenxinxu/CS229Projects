@@ -42,6 +42,8 @@ def pre_processing(train, is_train=True):
         train.loc[(train.unit_sales<0),'unit_sales'] = 0 # eliminate negatives
         train['unit_sales'] =  train['unit_sales'].apply(pd.np.log1p) #logarithm conversion
         train.loc[:, 'unit_sales'].fillna(0, inplace=True)
+
+    train['date'] = pd.to_datetime(train['date'])
     train['dow'] = train['date'].dt.dayofweek
     train['month'] = train['date'].dt.month
     train['day'] = train['date'].dt.day

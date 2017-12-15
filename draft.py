@@ -163,5 +163,12 @@ import numpy as np
 #
 # df_train = add_historical_features(dev_data, feature1, feature2=feature2)
 # df_train.to_csv('data/april/df_dev.csv', index=False)
-a = pd.read_csv('data/april/df_dev.csv')
-print a.columns.tolist()
+a = pd.read_csv('data/april/test_data2.csv')
+grouped = a.groupby(['day'])
+for i, group in grouped:
+        print '~~~~~~~~~~~~~~'
+        print group.head(10)
+        print group.tail(10)
+
+
+

@@ -8,7 +8,6 @@ from utils import *
 use_cuda = torch.cuda.is_available()
 HISTORY = 15 # How many days to look back
 DECAY = [0.2, 0.4, 0.6, 0.8]
-cols = []
 columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow', 'day', 'year',
            'us0', 'us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'us9', 'us10', 'us11', 'us12',
            'us13', 'us14']
@@ -155,8 +154,8 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
 if __name__ == "__main__":
     train_data, dev_data, train_labels, dev_labels = load_train_dev()
-    model = simpleNN(train_data.shape[1])
-    # model = resNext(train_data.shape[1])
+    # model = simpleNN(train_data.shape[1])
+    model = NN1(train_data.shape[1])
     model = model.cuda() if use_cuda else model
     train(train_data, dev_data, train_labels, dev_labels, model)
     torch.save(model, 'records/' + args.version + '.pt')
