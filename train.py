@@ -1,53 +1,50 @@
 from models import *
 import torch.optim as optim
-import argparse
 from torch.autograd import Variable
-import numpy as np
 from data_analysis import *
 import time
 from utils import *
 
 use_cuda = torch.cuda.is_available()
-DECAY = [0.5, 0.75]
-
-
-def solicit_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--iterations', help='iterations', type=int, default=100000)
-    parser.add_argument('--batch_size', help='batch_size', type=int, default=512)
-    parser.add_argument('--dev_batch_size', help='dev_batch_size', type=int, default=1024)
-    parser.add_argument('--iter2report', help='iterations to report', type=int, default=1000)
-    parser.add_argument('--version', help='version', type=str, default='v2_momentum')
-    parser.add_argument('--init_lr', help='initialized learning rate', type=float, default=0.01)
-    return parser.parse_args()
-
-args = solicit_args()
+HISTORY = 15 # How many days to look back
+DECAY = [0.2, 0.4, 0.6, 0.8]
+columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow', 'day', 'year',
+           'us0', 'us1', 'us2', 'us3', 'us4', 'us5', 'us6', 'us7', 'us8', 'us9', 'us10', 'us11', 'us12',
+           'us13', 'us14']
 
 
 def load_train_dev():
-    train_data = pd.read_csv('data/Jan17Jul_split/train_data.csv')
-    dev_data = pd.read_csv('data/Jan17Jul_split/dev_data.csv')
-    train_labels = pd.read_csv('data/Jan17Jul_split/train_labels.csv')
-    dev_labels = pd.read_csv('data/Jan17Jul_split/dev_labels.csv')
-
-
-    # train_data = train_data.drop('id', 1)
-    # dev_data = dev_data.drop('id', 1)
+    if args.debug:
+        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns, nrows=2000)
+        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns, nrows=2000)
+    else:
+        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns)
+        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns)
+    train_labels = np.load('data/april/train_labels.npy')
+    dev_labels = np.load('data/april/dev_labels.npy')
 
     print 'Data readed in!'
 
-    train_data = train_data.as_matrix()
-    dev_data = dev_data.as_matrix()
-    train_labels = train_labels.as_matrix()
-    dev_labels = dev_labels.as_matrix()
+    train_data = train_data[columns].as_matrix()
+    dev_data = dev_data[columns].as_matrix()
     return train_data, dev_data, train_labels, dev_labels
 
 
-
-
 def weighted_MSE(predictions, targets, weights):
-    return torch.sum(torch.mul(weights, ((predictions - targets) ** 2))) / torch.sum(weights)
+    # print torch.mul(weights, ((predictions - targets) ** 2))
+    #
+    # print predictions[0:5]
+    # print 'predictions - targets = '
+    # print targets[0:5]
+    # print '------------'
+    # print ((predictions - targets) ** 2)[0:5]
+    targets = targets.view((-1, 1))
+    diff = predictions - targets
+    return torch.sqrt(torch.sum(torch.mul(weights, (torch.mul(diff, diff)))) / torch.sum(weights))
 
+
+    # loss_function = nn.MSELoss()
+    # return loss_function(predictions, targets)
 
 def generate_dev_batch(dev_data, dev_labels, num_dev):
     seq = np.random.choice(num_dev, args.dev_batch_size)
@@ -55,30 +52,32 @@ def generate_dev_batch(dev_data, dev_labels, num_dev):
     batchPerishable = Variable(torch.FloatTensor(batchD[:, 0].astype(np.int64))).view((args.dev_batch_size, 1))
     batchStores = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
     batchItems = Variable(torch.LongTensor(batchD[:, 2].astype(np.int64)))
-    batchD = Variable(torch.Tensor(batchD[:, 3:]))
+    batchMonth = Variable(torch.LongTensor(batchD[:, 4].astype(np.int64)))
+    batchDay = Variable(torch.LongTensor(batchD[:, 6].astype(np.int64)))
+    batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
+
+    batchPro = Variable(torch.Tensor(batchD[:, 3])).contiguous().view((args.dev_batch_size, 1))
+    batchYear = Variable(torch.Tensor(batchD[:, 7])).contiguous().view((args.dev_batch_size, 1))
+    batchHis = Variable(torch.Tensor(batchD[:, 8:]))
     batchL = Variable(torch.Tensor(dev_labels[seq]))
 
-    batchD = batchD.cuda() if use_cuda else batchD
-    batchStores = batchStores.cuda() if use_cuda else batchStores
-    batchItems = batchItems.cuda() if use_cuda else batchItems
-    batchL = batchL.cuda() if use_cuda else batchL
+    varList = [batchPerishable, batchStores, batchItems, batchMonth, batchDay, batchDow, batchPro, batchYear, batchHis]
+    for var in varList:
+        if use_cuda:
+            var = var.cuda()
 
-
-    return batchPerishable, batchStores, batchItems, batchD, batchL
+    return varList, batchL
 
 def validation(model, dev_data, dev_labels, loss_function, num_dev):
     model.eval()
-    batchPerishable, batchStores, batchItems, batchD, batchL = generate_dev_batch(dev_data, dev_labels, num_dev)
+    varList, batchL = generate_dev_batch(dev_data, dev_labels, num_dev)
 
-    predictions = model(batchStores, batchItems, batchD)
-    loss = loss_function(predictions, batchL, batchPerishable)
-    # loss = loss_function(predictions, batchL)
-
+    predictions = model(varList)
+    loss = loss_function(predictions, batchL, varList[0])
     return loss
 
 
 def train(train_data, dev_data, train_labels, dev_labels, model):
-
 
     num_examples = len(train_data)
     num_dev = len(dev_data)
@@ -88,7 +87,6 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     dev_losses = []
 
     loss_function = weighted_MSE
-    # loss_function = nn.MSELoss()
     # optimizer = optim.Adam(model.parameters(), lr=args.init_lr * 0.01)
     optimizer = optim.SGD(model.parameters(), lr=args.init_lr, momentum=0.9)
     start = time.time()
@@ -99,20 +97,28 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
         batchPerishable = Variable(torch.FloatTensor(batchD[:, 0].astype(np.int64))).view((args.batch_size, 1))
         batchStores = Variable(torch.LongTensor(batchD[:, 1].astype(np.int64)))
         batchItems = Variable(torch.LongTensor(batchD[:, 2].astype(np.int64)))
-        batchD = Variable(torch.Tensor(batchD[:, 3:]))
+        batchMonth = Variable(torch.LongTensor(batchD[:, 4].astype(np.int64)))
+        batchDay = Variable(torch.LongTensor(batchD[:, 6].astype(np.int64)))
+        batchDow = Variable(torch.LongTensor(batchD[:, 5].astype(np.int64)))
+
+
+        batchPro = Variable(torch.Tensor(batchD[:, 3])).contiguous().view((args.batch_size, 1))
+        batchYear = Variable(torch.Tensor(batchD[:, 7])).contiguous().view((args.batch_size, 1))
+        batchHis = Variable(torch.Tensor(batchD[:, 8:]))
         batchL = Variable(torch.Tensor(train_labels[seq]))
 
-        batchD = batchD.cuda() if use_cuda else batchD
-        batchStores = batchStores.cuda() if use_cuda else batchStores
-        batchItems = batchItems.cuda() if use_cuda else batchItems
-        batchL = batchL.cuda() if use_cuda else batchL
+        varList = [batchPerishable, batchStores, batchItems, batchMonth, batchDay, batchDow, batchPro, batchYear, batchHis]
+        for var in varList:
+            if use_cuda:
+                var = var.cuda()
 
         model.zero_grad()
 
-        predictions = model(batchStores, batchItems, batchD)
-        loss = loss_function(predictions, batchL, batchPerishable)
-        # loss = loss_function(predictions, batchL)
+        predictions = model(varList)
+        # print 'Predcition = ', predictions
 
+
+        loss = loss_function(predictions, batchL, batchPerishable)
         if step % args.iter2report == 0:
             print 'Current step = ', step
             print 'Current loss = ', loss
@@ -125,6 +131,12 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
 
             print 'Validation loss = ', dev_loss
             dev_losses.append(dev_loss.data[0])
+
+        # if step == args.iter2report * 3:
+        #     lr = 0.01
+        #     for param_group in optimizer.param_groups:
+        #         param_group['lr'] = lr
+        #     print 'Learning rate increased ... '
 
         if step == args.iterations * DECAY[0] or step == args.iterations * DECAY[1]:
             print 'Decay learning rate to ' + str(args.init_lr * 0.1 ** (1 + step / DECAY[1]))
@@ -139,9 +151,11 @@ def train(train_data, dev_data, train_labels, dev_labels, model):
     df.to_csv('records/' + args.version + '_error.csv', index=False)
 
 
+
 if __name__ == "__main__":
     train_data, dev_data, train_labels, dev_labels = load_train_dev()
-    model = NN1(train_data.shape[1] - 1)
+    # model = simpleNN(train_data.shape[1])
+    model = NN1(train_data.shape[1])
     model = model.cuda() if use_cuda else model
     train(train_data, dev_data, train_labels, dev_labels, model)
     torch.save(model, 'records/' + args.version + '.pt')
