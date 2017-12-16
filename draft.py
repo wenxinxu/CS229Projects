@@ -4,7 +4,7 @@ import numpy as np
 
 # data = pd.read_csv('data/april/april.csv') #14489514
 # print len(data)
-
+#
 # data = readin_data('data/train.csv')
 # data = pre_processing(data)
 # data = data.loc[data['month'] >= 5, :]
@@ -15,19 +15,19 @@ import numpy as np
 # # df['date'] = pd.to_datetime(df['date'])
 # # df['new_date'] = df['date'] - pd.to_timedelta(10, unit='d')
 # print len(df.loc[df['store_nbr'] == 2, :])
-
+#
 # df = pd.read_csv('data/april/may.csv')
 # df_source = pd.read_csv('data/april/april.csv')
 #
 # df['date'] = pd.to_datetime(df['date'])
 # df_source['date'] = pd.to_datetime(df_source['date'])
-
+#
 # for i in range(4, 9):
 #     print 'Processing the %i th month...' %i
 #     df = df_source.loc[df_source['month'] == i, :]
 #     df.to_csv('data/april/' + str(i) + '.csv', index=False)
 # save_path = 'data/april/may_sales.csv'
-
+#
 # fill30days(df, save_path)
 # df.info()
 # grouped = df_source.groupby(['store_nbr', 'item_nbr', 'month', 'day'])
@@ -92,10 +92,10 @@ import numpy as np
 #         np.save('data/april/f' + str(i) + '.npy', arr=sales)
 #         print 'Saved the %i th feature...' %i
 #
-
-
+#
+#
 # fillDays(df)
-
+#
 # df = pd.read_csv('data/april/may.csv')
 # b = pd.read_csv('data/april/april.csv')
 #
@@ -106,17 +106,19 @@ import numpy as np
 # print len(a)
 # a.to_csv('data/april/aa.csv')
 # print grouped.get_group((15, 17)).head(50)
-
+#
 # df = pd.read_csv('data/april/julaug16.csv')
 # print df.head()
 # print df.tail()
 # print(len(df))
 # generate_features(path='data/april/julaug16.csv', save_path='data/april/julaug16_feature.npy')
+#
 
-
-
-
-
+df = pd
+#
+#
+#
+#
 # df = pd.read_csv('data/april/april.csv')
 # # print(len(df))
 # df = df.query('(month > 4) | (day > 15)')
@@ -146,7 +148,7 @@ import numpy as np
 #
 # print dev_data.head()
 # print dev_data.tail()
-
+#
 # df = pd.read_csv('data/april/julaug16.csv')
 # print df.head()
 # print df.tail()
@@ -155,7 +157,7 @@ import numpy as np
 # df = df.loc[year == 2016]
 # df.to_csv('data/april/julaug16.csv', index=False)
 # generate_features('data/april/julaug16.csv', 'data/april/julaug16_features.npy')
-
+#
 # train_data = pd.read_csv('data/april/train.csv')
 # dev_data = pd.read_csv('data/april/dev.csv')
 # feature2 = np.load('data/april/april_sales.npy')
@@ -163,8 +165,10 @@ import numpy as np
 #
 # df_train = add_historical_features(dev_data, feature1, feature2=feature2)
 # df_train.to_csv('data/april/df_dev.csv', index=False)
-a = pd.read_csv('data/april/model3_predictions.csv')
-print a.head()
-
-
-
+#
+# train_data = pd.read_csv('data/april/df_train.csv')
+# print train_data.head()
+# print train_data.tail()
+#
+df = pd.read_csv('data/april/dev.csv', usecols=['store_nbr'])
+print len(df)

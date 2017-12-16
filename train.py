@@ -15,8 +15,8 @@ columns = ['perishable', 'store_nbr', 'item_nbr', 'onpromotion', 'month', 'dow',
 
 def load_train_dev():
     if args.debug:
-        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns)
-        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns)
+        train_data = pd.read_csv('data/april/df_train.csv', usecols=columns, nrows=2000)
+        dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns, nrows=2000)
     else:
         train_data = pd.read_csv('data/april/df_train.csv', usecols=columns)
         dev_data = pd.read_csv('data/april/df_dev.csv', usecols=columns)
